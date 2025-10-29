@@ -94,7 +94,7 @@ fn line_trimmed_fallback_match(
     let mut search_lines: Vec<&str> = search_content.split('\n').collect();
 
     // Trim trailing empty line if exists
-    if search_lines.last().map_or(false, |l| l.is_empty()) {
+    if search_lines.last().is_some_and(|l| l.is_empty()) {
         search_lines.pop();
     }
 
@@ -161,7 +161,7 @@ fn block_anchor_fallback_match(
     }
 
     // Trim trailing empty line if exists
-    if search_lines.last().map_or(false, |l| l.is_empty()) {
+    if search_lines.last().is_some_and(|l| l.is_empty()) {
         search_lines.pop();
     }
 
@@ -248,12 +248,7 @@ impl NewFileContentConstructor {
     }
 
     fn find_last_matching_line_index(&self, regex: &Regex, line_limit: usize) -> Option<usize> {
-        for i in (0..line_limit).rev() {
-            if regex.is_match(&self.pending_non_standard_lines[i]) {
-                return Some(i);
-            }
-        }
-        None
+        (0..line_limit).rev().find(|&i| regex.is_match(&self.pending_non_standard_lines[i]))
     }
 
     fn update_processing_state(&mut self, new_state: ProcessingState) -> Result<(), DiffError> {
@@ -365,22 +360,18 @@ impl NewFileContentConstructor {
             }
             self.last_processed_index = self.search_end_index as usize;
             self.reset_for_next_block();
-        } else {
-            if self.is_replacing_active() {
-                // Output replacement lines immediately if we know the insertion point
-                if self.search_match_index != -1 {
-                    self.result.push_str(&line);
-                    self.result.push('\n');
-                }
-            } else if self.is_searching_active() {
-                self.current_search_content.push_str(&line);
-                self.current_search_content.push('\n');
-            } else {
-                if can_write_pending_non_standard_lines {
-                    // 处理非标内容
-                    self.pending_non_standard_lines.push(line);
-                }
+        } else if self.is_replacing_active() {
+            // Output replacement lines immediately if we know the insertion point
+            if self.search_match_index != -1 {
+                self.result.push_str(&line);
+                self.result.push('\n');
             }
+        } else if self.is_searching_active() {
+            self.current_search_content.push_str(&line);
+            self.current_search_content.push('\n');
+        } else if can_write_pending_non_standard_lines {
+            // 处理非标内容
+            self.pending_non_standard_lines.push(line);
         }
 
         Ok(remove_line_count)
@@ -458,7 +449,7 @@ impl NewFileContentConstructor {
         let search_tag_regexp = Regex::new(r"^([-]{3,}|[<]{3,}) SEARCH$").unwrap();
         let search_tag_index = self
             .find_last_matching_line_index(&search_tag_regexp, line_limit)
-            .ok_or_else(|| DiffError::InvalidReplaceMarker(0))?;
+            .ok_or(DiffError::InvalidReplaceMarker(0))?;
 
         let fix_lines: Vec<String> =
             self.pending_non_standard_lines[search_tag_index..line_limit].to_vec();
@@ -483,7 +474,7 @@ impl NewFileContentConstructor {
         let replace_begin_tag_regexp = Regex::new(r"^[=]{3,}$").unwrap();
         let replace_begin_tag_index = self
             .find_last_matching_line_index(&replace_begin_tag_regexp, line_limit)
-            .ok_or_else(|| DiffError::MalformedReplaceBlock(0))?;
+            .ok_or(DiffError::MalformedReplaceBlock(0))?;
 
         let fix_lines: Vec<String> = self.pending_non_standard_lines[replace_begin_tag_index
             .saturating_sub(remove_line_count)
@@ -567,8 +558,8 @@ pub fn construct_new_file_content_v2(
     let mut lines: Vec<&str> = diff_content.split('\n').collect();
 
     // If the last line looks like a partial marker but isn't recognized, remove it
-    if let Some(last_line) = lines.last() {
-        if !last_line.is_empty()
+    if let Some(last_line) = lines.last()
+        && !last_line.is_empty()
             && (last_line.starts_with(SEARCH_BLOCK_CHAR)
                 || last_line.starts_with(LEGACY_SEARCH_BLOCK_CHAR)
                 || last_line.starts_with("=")
@@ -580,7 +571,6 @@ pub fn construct_new_file_content_v2(
         {
             lines.pop();
         }
-    }
 
     for line in lines {
         constructor.process_line(line.to_string())?;
