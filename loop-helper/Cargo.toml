@@ -1,7 +1,0 @@
-[package]
-name = "loop-helper"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-async-openai = "0.30.1"
