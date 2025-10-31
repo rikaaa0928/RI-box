@@ -1,12 +1,14 @@
 use replace_in_file::construct_new_file_content_v2;
 
+// Ported from refer/diff.test.ts
+
 #[test]
 fn test_empty_file() {
     let original = "";
     let diff = "------- SEARCH
 =======
 new content
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "new content\n";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -20,7 +22,7 @@ fn test_malformed_search_mixed_symbols() {
 line2
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -32,7 +34,7 @@ fn test_malformed_search_insufficient_dashes() {
 line2
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -44,7 +46,7 @@ fn test_malformed_search_missing_space() {
 line2
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -56,7 +58,7 @@ fn test_exact_match_replacement() {
 line2
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line1\nreplaced\nline3";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -70,7 +72,7 @@ fn test_line_trimmed_match_replacement() {
 line2
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line1\nreplaced\nline3";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -86,7 +88,7 @@ middle
 end
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line1\nreplaced\nline5";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -101,7 +103,7 @@ line2
 =======
 replaced
 
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line1\nreplaced\n\nline3";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -115,7 +117,7 @@ fn test_final_chunk_with_remaining_content() {
 line2
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line1\nreplaced\nline3";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -129,13 +131,13 @@ fn test_multiple_ordered_replacements() {
 First
 =======
 1st
-+++++++ REPLACE
+++++++ REPLACE
 
 ------- SEARCH
 Third
 =======
 3rd
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "1st\nSecond\n3rd\nFourth";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -149,12 +151,12 @@ fn test_replace_then_delete() {
 line2
 =======
 replaced
-+++++++ REPLACE
+++++++ REPLACE
 
 ------- SEARCH
 line4
 =======
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line1\nreplaced\nline3\n";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -167,13 +169,13 @@ fn test_delete_then_replace() {
     let diff = "------- SEARCH
 line1
 =======
-+++++++ REPLACE
+++++++ REPLACE
 
 ------- SEARCH
 line3
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
     let expected = "line2\nreplaced\nline4";
 
     let result = construct_new_file_content_v2(diff, original, true).unwrap();
@@ -185,7 +187,7 @@ fn test_malformed_diff_missing_separator() {
     let original = "line1\nline2\nline3";
     let diff = "------- SEARCH
 line2
-+++++++ REPLACE
+++++++ REPLACE
 replaced";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
@@ -198,7 +200,7 @@ fn test_malformed_diff_trailing_space_on_separator() {
 line2
 ======= 
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -208,9 +210,9 @@ fn test_malformed_diff_double_replace_markers() {
     let original = "line1\nline2\nline3";
     let diff = "------- SEARCH
 line2
-+++++++ REPLACE
+++++++ REPLACE
 first replacement
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -222,7 +224,7 @@ fn test_malformed_diff_malformed_separator_with_dashes() {
 line2
 ------- =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -234,7 +236,7 @@ fn test_no_match_found() {
 non-existent
 =======
 replaced
-+++++++ REPLACE";
+++++++ REPLACE";
 
     assert!(construct_new_file_content_v2(diff, original, true).is_err());
 }
@@ -246,12 +248,9 @@ fn test_missing_final_replace_marker_when_final() {
 line2
 =======
 replaced";
-    // Note: missing +++++++ REPLACE marker
-
-    let result = construct_new_file_content_v2(diff, original, true).unwrap();
-    // Should still work and replace line2 with "replaced"
     let expected = "line1\nreplaced\nline3";
 
+    let result = construct_new_file_content_v2(diff, original, true).unwrap();
     assert_eq!(result, expected);
 }
 
@@ -265,15 +264,13 @@ fn test_missing_final_replace_marker_with_multiple_lines() {
 \tconst a = 42;
 \tconsole.log('updated');
 \treturn a;";
-    // Note: missing +++++++ REPLACE marker
-
-    let result = construct_new_file_content_v2(diff, original, true).unwrap();
     let expected = "function test() {\n\tconst a = 42;\n\tconsole.log('updated');\n\treturn a;\n}";
 
+    let result = construct_new_file_content_v2(diff, original, true).unwrap();
     assert_eq!(result, expected);
 }
 
-// Out-of-order test cases
+// Out-of-order replacements (TS v1 expects success; Rust v2 is strict → errors)
 #[test]
 fn test_out_of_order_replacements_different_positions() {
     let original = "first\nsecond\nthird\nfourth\n";
@@ -281,18 +278,37 @@ fn test_out_of_order_replacements_different_positions() {
 fourth
 =======
 new fourth
-+++++++ REPLACE
+++++++ REPLACE
 ------- SEARCH
 second
 =======
 new second
-+++++++ REPLACE";
+++++++ REPLACE";
 
-    // Note: The v2 implementation doesn't support out-of-order replacements
-    // It will throw an error when trying to match earlier content after later content
     let result = construct_new_file_content_v2(diff, original, true);
+    assert!(result.is_err());
+}
 
-    // This should error because second comes before fourth
+#[test]
+fn test_out_of_order_multiple() {
+    let original = "one\ntwo\nthree\nfour\nfive\n";
+    let diff = "------- SEARCH
+four
+=======
+fourth
+++++++ REPLACE
+------- SEARCH
+two
+=======
+second
+++++++ REPLACE
+------- SEARCH
+five
+=======
+fifth
+++++++ REPLACE";
+
+    let result = construct_new_file_content_v2(diff, original, true);
     assert!(result.is_err());
 }
 
@@ -303,14 +319,13 @@ fn test_out_of_order_with_indentation() {
 \tconst c = 3;
 =======
 \tconst c = 30;
-+++++++ REPLACE
+++++++ REPLACE
 ------- SEARCH
 \tconst a = 1;
 =======
 \tconst a = 10;
-+++++++ REPLACE";
+++++++ REPLACE";
 
-    // This should error because 'a' comes before 'c'
     let result = construct_new_file_content_v2(diff, original, true);
     assert!(result.is_err());
 }
@@ -322,16 +337,15 @@ fn test_out_of_order_with_empty_lines() {
 footer
 =======
 new footer
-+++++++ REPLACE
+++++++ REPLACE
 ------- SEARCH
 
 body
 
 =======
 new body content
-+++++++ REPLACE";
+++++++ REPLACE";
 
-    // This should error because body comes before footer
     let result = construct_new_file_content_v2(diff, original, true);
     assert!(result.is_err());
 }

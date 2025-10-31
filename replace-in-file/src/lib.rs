@@ -5,6 +5,9 @@ use thiserror::Error;
 pub const REPLACE_IN_FILE_TOOL_INSTRUCTIONS: &str =
     include_str!("../replace_in_file_tool_instructions.md");
 
+pub mod lib_v1;
+pub use lib_v1::construct_new_file_content_v1;
+
 #[derive(Error, Debug)]
 pub enum DiffError {
     #[error("The SEARCH block:\n{0}\n...does not match anything in the file.")]
